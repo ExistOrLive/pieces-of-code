@@ -201,12 +201,15 @@
                         [_headerView updateRefreshState:ZMRefreshState_Refreshing];    // 刷新
                         [UIView animateWithDuration:0.1 animations:^{
                             _scrollView.contentInset = UIEdgeInsetsMake(ZMRefreshViewHeight, 0, 0, 0);
-                        }];
-                        
-                        if(_delegate && [_delegate respondsToSelector:@selector(ZMRefreshIsDragUp:refreshView:)])
-                        {
-                            [_delegate ZMRefreshIsDragUp:NO refreshView:_headerView];
                         }
+                        completion:^(BOOL finish)
+                        {
+                            if(_delegate && [_delegate respondsToSelector:@selector(ZMRefreshIsDragUp:refreshView:)])
+                            {
+                                [_delegate ZMRefreshIsDragUp:NO refreshView:_headerView];
+                            }
+                            
+                        }];
                     }
                 }
             }
@@ -251,12 +254,15 @@
                         
                         [UIView animateWithDuration:0.1 animations:^{
                             _scrollView.contentInset = UIEdgeInsetsMake(0, 0, ZMRefreshViewHeight, 0);
-                        }];
-                        
-                        if(_delegate && [_delegate respondsToSelector:@selector(ZMRefreshIsDragUp:refreshView:)])
-                        {
-                            [_delegate ZMRefreshIsDragUp:YES refreshView:_footerView];
                         }
+                        completion:^(BOOL finish)
+                        {
+                             if(_delegate && [_delegate respondsToSelector:@selector(ZMRefreshIsDragUp:refreshView:)])
+                             {
+                                 [_delegate ZMRefreshIsDragUp:YES refreshView:_footerView];
+                             }
+                             
+                        }];
                     }
                     
                     
