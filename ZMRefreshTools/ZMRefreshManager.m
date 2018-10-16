@@ -139,7 +139,7 @@
     }
     else
     {
-        [_headerView updateRefreshState:ZMRefreshState_NoMoreRefresh];
+        [_footerView updateRefreshState:ZMRefreshState_NoMoreRefresh];
     }
 }
 
