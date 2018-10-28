@@ -27,7 +27,7 @@
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
         singleInstance = [[ZMPermissionManager alloc] init];
-        singleInstance.configProperty = @{[NSNumber numberWithInt:ZMPermissionRequestType_Camera]:@"requestPhotoLibraryUsagePermissionWithAgreeBlock:withDeniedBlock:"};
+        singleInstance.configProperty = @{[NSNumber numberWithInt:ZMPermissionRequestType_PhotoLibrary]:@"requestPhotoLibraryUsagePermissionWithAgreeBlock:withDeniedBlock:"};
     });
     
     return singleInstance;
@@ -41,7 +41,15 @@
     
     if([self respondsToSelector:selectorObject])
     {
-       id result = [self performSelector:selectorObject withObject:agreeBlock withObject:deniedBlock];
+        /**
+         * 获取SEL对应的IMP实现方法调用
+         * 1、 适应多个参数的情况
+         * 2、 适应返回值为基本数据类型和void的情况；使用performSelector时返回值为基本数据类型可能会闪退
+         * 3、 当方法需要频繁调用时，使用函数指针，效率会更高
+         **/
+        IMP methodIMP = [self methodForSelector:selectorObject];
+        BOOL(* funtionPointer)(ZMPermissionManager * ,SEL,void(^)(void),void(^)(void)) = (BOOL(*)(ZMPermissionManager * ,SEL,void(^)(void),void(^)(void)))methodIMP;
+        return funtionPointer(self,selectorObject,agreeBlock,deniedBlock);
     }
 
     return NO;
@@ -68,7 +76,7 @@
         {
             agreeBlock();
         }
-        return YES;
+          return YES;
     }
     
     
