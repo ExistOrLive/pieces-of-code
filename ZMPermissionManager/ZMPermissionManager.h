@@ -2,7 +2,7 @@
 //  ZMPermissionManager.h
 //  iCenter
 //
-//  Created by panzhengwei on 2018/10/23.
+//  Created by zhumeng on 2018/10/23.
 //  Copyright © 2018年 MyApp. All rights reserved.
 //
 
@@ -10,16 +10,17 @@
 
 typedef enum
 {
-    ZMPermissionRequestType_PhotoLibrary,
-    ZMPermissionRequestType_Camera,
-    ZMPermissionRequestType_Microphone,
-    ZMPermissionRequestType_Contact
+    ZMPermissionRequestType_PhotoLibrary,          // 相册权限
+    ZMPermissionRequestType_Camera,                // 摄像头权限
+    ZMPermissionRequestType_Microphone,            // 麦克风权限
+    ZMPermissionRequestType_Contact,               // 通讯录权限
+    ZMPermissionRequestType_Location               // 定位权限
 }ZMPermissionRequestType;
 
 
-
-
-
+/**
+ * 最低支持iOS 8.0
+ **/
 @interface ZMPermissionManager : NSObject
 
 /**
