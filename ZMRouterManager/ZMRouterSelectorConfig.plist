@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>EnterMOAChatViewController</key>
+	<dict>
+		<key>URLType</key>
+		<string>UI</string>
+		<key>URLClass</key>
+		<string>MOAChatViewController</string>
+		<key>URLClassType</key>
+		<string>NotSingle</string>
+		<key>URLSelector</key>
+		<string>enterMOAChatViewController:rosterName:chatType:fromView:isNavigated:sourceController:</string>
+		<key>URLSelectorType</key>
+		<string>Class</string>
+	</dict>
+</dict>
+</plist>
