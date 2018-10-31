@@ -2,7 +2,7 @@
 //  ZMRouterSupport.h
 //  iCenter
 //
-//  Created by panzhengwei on 2018/10/30.
+//  Created by zhumeng on 2018/10/30.
 //  Copyright © 2018年 MyApp. All rights reserved.
 //
 
@@ -10,6 +10,10 @@
 #define ZMRouterSupport_h
 
 static const NSString * ZMRouterPrefix = @"ZMRouter";
+
+static const NSString * ZMUIRouterPrefix = @"ZMUIRouter";
+
+static const NSString * ZMServiceRouterPrefix = @"ZMServiceRouter";
 
 
 
