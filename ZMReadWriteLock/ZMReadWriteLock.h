@@ -10,5 +10,12 @@
 
 @interface ZMReadWriteLock : NSObject
 
+- (NSCondition *) lockReadLock;
+- (void) unLockReadLock:(NSCondition *) readLock;
+
+
+- (void) lockWriteLock;
+- (void) unLockWriteLock;
+
 
 @end
