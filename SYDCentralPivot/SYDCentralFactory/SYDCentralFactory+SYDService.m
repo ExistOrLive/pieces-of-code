@@ -1,0 +1,43 @@
+//
+//  SYDCentralFactory+SYDService.m
+//  SYDServiceSDK
+//
+//  Created by panzhengwei on 2019/1/9.
+//  Copyright © 2019年 YueMingXingXi. All rights reserved.
+//
+
+#import "SYDCentralFactory+SYDService.h"
+
+@implementation SYDCentralFactory (SYDService)
+
+- (id) getSYDServiceBean:(NSString *) serviceKey
+{
+    id serviceBean = nil;
+    
+    if(!self.serviceModelMapCache)
+    {
+        self.serviceModelMapCache = [[NSMutableDictionary alloc] init];
+    }
+    else
+    {
+        serviceBean = [self.serviceModelMapCache objectForKey:serviceKey];
+    }
+    
+    if(!serviceBean)
+    {
+        serviceBean = [self getCommonBean:serviceKey];
+        
+        if(serviceBean)
+        {
+            [self.serviceModelMapCache setObject:serviceBean forKey:serviceKey];
+        }
+        else
+        {
+            LOG_DEBUGGING_NS(@"SYDCentralFactory_getSYDServiceBean: serviceBean for [%@] not exist",serviceKey);
+        }
+    }
+    
+    return serviceBean;
+}
+
+@end
