@@ -36,6 +36,15 @@ typedef enum
 @end
 
 
+@interface SYDCentralRouterServiceModel : SYDCentralRouterModel
+
+@property(nonatomic,strong) NSString * queueTag;                                 // 异步执行的dispatch_queue_t tag
+
+@property(nonatomic,strong) NSArray * asyncMethodArray;                          // 异步执行的方法
+
+@end
+
+
 
 #pragma mark -
 

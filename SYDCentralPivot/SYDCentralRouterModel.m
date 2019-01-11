@@ -12,6 +12,10 @@
 
 @end
 
+@implementation SYDCentralRouterServiceModel
+
+@end
+
 @implementation SYDCentralRouterViewControllerConfig
 
 @end

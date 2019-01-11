@@ -15,6 +15,9 @@
 
 #import "SYDCentralRouter.h"
 #import "SYDCentralRouter+ViewController.h"
+#import "SYDCentralRouter+SYDService.h"
+
+#import "SYDCentralQueuePool.h"
 
 #import "UIViewController+SYDRouter.h"
 

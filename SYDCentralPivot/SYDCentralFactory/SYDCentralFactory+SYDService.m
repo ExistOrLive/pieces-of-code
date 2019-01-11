@@ -7,10 +7,12 @@
 //
 
 #import "SYDCentralFactory+SYDService.h"
+#import <objc/Runtime.h>
+#import <objc/message.h>
 
 @implementation SYDCentralFactory (SYDService)
 
-- (id) getSYDServiceBean:(NSString *) serviceKey
+- (id) getSYDServiceBean:(const NSString *) serviceKey
 {
     id serviceBean = nil;
     
@@ -39,5 +41,9 @@
     
     return serviceBean;
 }
+
+
+
+
 
 @end

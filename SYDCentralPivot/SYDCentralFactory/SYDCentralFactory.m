@@ -58,12 +58,29 @@
                  
                  if(cla)
                  {
-                     SYDCentralRouterModel * model = [[SYDCentralRouterModel alloc] init];
+                     SYDCentralRouterModel * model = nil;
+                     if((SYDCentralRouterModelType)modelKey == SYDCentralRouterModelType_Service)
+                     {
+                         SYDCentralRouterServiceModel * tmpModel = [[SYDCentralRouterServiceModel alloc] init];
+                         NSDictionary * queueInfo = [modelValue objectForKey:@"asyncMethods"];
+         
+                         if(queueInfo)
+                         {
+                             [tmpModel setQueueTag:[queueInfo objectForKey:@"queueTag"]];
+                             [tmpModel setAsyncMethodArray:[queueInfo objectForKey:@"methods"]];
+                         }
+                     }
+                     else
+                     {
+                         model = [[SYDCentralRouterModel alloc] init];
+                     }
+                  
                      [model setModelKey:modelKey];
                      [model setCla:cla];
                      [model setIsSingle:[[modelValue objectForKey:@"isSingle"] boolValue]];
                      [model setSingletonMethodStr:[modelValue objectForKey:@"singleMethod"]];
                      [_sydCentralModelMap setObject:model forKey:modelKey];
+                   
                  }
                  else
                  {

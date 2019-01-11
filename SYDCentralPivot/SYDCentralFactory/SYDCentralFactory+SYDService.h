@@ -10,6 +10,6 @@
 
 @interface SYDCentralFactory (SYDService)
 
-- (id) getSYDServiceBean:(NSString *) serviceKey;
+- (id) getSYDServiceBean:(const NSString *) serviceKey;
 
 @end
