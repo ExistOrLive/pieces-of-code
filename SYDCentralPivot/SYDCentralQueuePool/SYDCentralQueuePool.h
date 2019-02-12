@@ -2,8 +2,8 @@
 //  SYDCentralQueuePool.h
 //  SYDServiceSDK
 //
-//  Created by panzhengwei on 2019/1/10.
-//  Copyright © 2019年 YueMingXingXi. All rights reserved.
+//  Created by zhumeng on 2019/1/10.
+//  Copyright © 2019年 zhumeng. All rights reserved.
 //
 
 #import <Foundation/Foundation.h>
