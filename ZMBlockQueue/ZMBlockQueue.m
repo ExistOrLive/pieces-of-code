@@ -14,12 +14,10 @@
  * 3、 当生产者线程向缓存队列中插入一个元素，需要唤醒等待的消费者线程
  * 4、 当消费者线程从缓存队列中取出一个元素，需要唤醒等待的生产者线程
  *
- *  queation：
- *  当生产者线程插入一个元素后，会唤醒等待的一个消费者线程A，然后释放互斥锁；
- *  这是如果存在一个因为互斥锁而阻塞的消费者线程B，就会与消费者线程A竞争互斥锁，
- *  如果A获取互斥锁，则流程正常
- *  如果B获取互斥锁，就会导致A之后进入临界区代码时，出现错误，因为A已经在等待判断了条件，唤醒后不再判断，直接从缓存队列中取出元素，此时可能取出nil
  *
+ *  pthread_cond_t 是一个条件， pthread_mutex_t 是一个同步锁， 两者可以组成一个条件锁； 条件锁要保证信号量的互斥访问
+ *  一个pthread_cond_t 对应一个信号量
+ *  pthread_mutex_t 要保证信号量的修改及访问 和 pthread_cond_wait 在同一个临界区
  **/
 
 #import "ZMBlockQueue.h"
@@ -30,10 +28,15 @@
 
 @interface ZMBlockQueue()
 {
-    pthread_mutex_t mutex;
-    pthread_cond_t putCondition;
-    pthread_cond_t takeCondition;
-    pthread_mutexattr_t mutexattr;
+    pthread_mutex_t syncMutex;               // 同步锁，用于对数组的互斥访问
+    
+    pthread_cond_t putCondition;             // 条件锁，在数组容量满时，wait
+    pthread_mutex_t putMutex;                // 保证 put线程对信号量的同步访问
+    
+    pthread_cond_t takeCondition;            // 条件锁， 在数组为空时， wait
+    pthread_mutex_t takeMutex;               // 保证 take线程对信号量的同步访问
+    
+    
 }
 
 @property(nonatomic,strong) NSMutableArray * queue;
@@ -47,7 +50,6 @@
 {
     if(self = [super init])
     {
-        _POSIX_THREAD_PRIORITY_SCHEDULING
         _capacity = capacity;
         _queue = [[NSMutableArray alloc] init];
     
@@ -55,10 +57,13 @@
          *
          * 设置为默认互斥锁，当一个线程获取到锁后，其余线程必须在请求锁时，形成一个等待对列；当释放锁后，其余线程按优先级取锁； 默认不能够嵌套
          **/
-        pthread_mutex_init(&mutex,NULL);
+        pthread_mutex_init(&syncMutex,NULL);
         
         pthread_cond_init(&putCondition, NULL);
+        pthread_mutex_init(&putMutex, NULL);
+        
         pthread_cond_init(&takeCondition, NULL);
+        pthread_mutex_init(&takeMutex, NULL);
         
     }
     
@@ -80,11 +85,11 @@
 {
     NSUInteger tmpSize = 0;
     
-    pthread_mutex_lock(&mutex);
+    pthread_mutex_lock(&syncMutex);
     
     tmpSize = [self.queue count];
     
-    pthread_mutex_unlock(&mutex);
+    pthread_mutex_unlock(&syncMutex);
     
     return tmpSize;
 }
@@ -97,31 +102,30 @@
         return;
     }
     
-    pthread_mutex_lock(&mutex);
+    pthread_mutex_lock(&putMutex);
     
-    NSLog(@"Thread[%@] put %@ start",[NSThread currentThread],value);
-    
-    if([self.queue count] >= self.capacity)
+    if(self.size >= self.capacity)
     {
-        NSLog(@"Thread[%@] put %@ wait",[NSThread currentThread],value);
-        
-        pthread_cond_wait(&putCondition, &mutex);
-        
-        NSLog(@"Thread[%@] put %@ restart",[NSThread currentThread],value);
+        NSLog(@"Thread[%@] put wait %@",[NSThread currentThread],value);
+        pthread_cond_wait(&putCondition, &putMutex);
     }
+    
+    NSLog(@"Thread[%@] put start %@",[NSThread currentThread],value);
+    
+    pthread_mutex_lock(&syncMutex);
     
     [self.queue insertObject:value atIndex:0];
     
-     NSLog(@"Thread[%@] count %ld",[NSThread currentThread],[self.queue count]);
+    pthread_mutex_unlock(&syncMutex);
     
-   
+    NSLog(@"Thread[%@] put end %@",[NSThread currentThread],value);
+    
     pthread_cond_signal(&takeCondition);
     
-  
+    pthread_mutex_unlock(&putMutex);
     
-    NSLog(@"Thread[%@] put %@ end",[NSThread currentThread],value);
-    
-    pthread_mutex_unlock(&mutex);
+    NSLog(@"Thread[%@] count %ld",[NSThread currentThread],self.size);
+
 }
 
 
@@ -130,35 +134,45 @@
 {
     id value = nil;
     
-    pthread_mutex_lock(&mutex);
+    pthread_mutex_lock(&takeMutex);
     
-    NSLog(@"Thread[%@] take start",[NSThread currentThread]);
-    
-    if([self.queue count] <= 0)
+    if(self.size <= 0)
     {
         NSLog(@"Thread[%@] take wait",[NSThread currentThread]);
-        
-        pthread_cond_wait(&takeCondition, &mutex);
-        
-        NSLog(@"Thread[%@] take restart",[NSThread currentThread]);
+        pthread_cond_wait(&takeCondition, &takeMutex);
     }
+  
+    NSLog(@"Thread[%@] take start",[NSThread currentThread]);
+    
+    pthread_mutex_lock(&syncMutex);
     
     value = [self.queue lastObject];
     [self.queue removeLastObject];
     
+    pthread_mutex_unlock(&syncMutex);
+    
+    NSLog(@"Thread[%@] take %@ end",[NSThread currentThread],value);
+    
     pthread_cond_signal(&putCondition);
     
-
-    NSLog(@"Thread[%@] take %@ end",[NSThread currentThread],value);
-        
-    pthread_mutex_unlock(&mutex);
+    NSLog(@"Thread[%@] count %ld",[NSThread currentThread],self.size);
     
+    pthread_mutex_unlock(&takeMutex);
     
     return value;
 }
 
 
-
+- (void) dealloc
+{
+    pthread_mutex_destroy(&syncMutex);
+    
+    pthread_cond_destroy(&putCondition);
+    pthread_mutex_destroy(&putMutex);
+    
+    pthread_cond_destroy(&takeCondition);
+    pthread_mutex_destroy(&takeMutex);
+}
 
 
 
