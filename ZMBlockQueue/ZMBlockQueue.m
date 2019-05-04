@@ -15,9 +15,8 @@
  * 4、 当消费者线程从缓存队列中取出一个元素，需要唤醒等待的生产者线程
  *
  *
- *  pthread_cond_t 是一个条件， pthread_mutex_t 是一个同步锁， 两者可以组成一个条件锁； 条件锁要保证信号量的互斥访问
- *  一个pthread_cond_t 对应一个信号量
- *  pthread_mutex_t 要保证信号量的修改及访问 和 pthread_cond_wait 在同一个临界区
+ *  pthread_cond_t 是一个条件， pthread_mutex_t 是一个同步锁， 两者可以组成一个条件锁； 条件锁要保证条件变量的互斥访问
+ *  pthread_mutex_t 要保证条件变量的修改及访问 和 pthread_cond_wait 在同一个临界区
  **/
 
 #import "ZMBlockQueue.h"

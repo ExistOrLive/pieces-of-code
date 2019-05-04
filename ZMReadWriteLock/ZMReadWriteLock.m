@@ -12,14 +12,18 @@
  * 1、 写操作互斥，因此写操作之间需要一个互斥锁 writeLock
  * 2、 读操作之间不需要互斥， 因此读操作之间不需要互斥锁
  * 3、 读的时候不可以写，写的时候不可以读 ， 需要信号量 readCount（当前读操作的个数） isWrite（当前时候正在写）
- * 4、 实现信号量通信需要条件锁NSCondition，所有没有读操作都有一个条件锁
- * 5、 修改信号量是互斥的
+ * 4、 实现条件变量通信需要条件锁NSCondition，所有没有读操作都有一个条件锁
+ * 5、 修改条件变量是互斥的
  *
  *
- *。为了避免死锁，读操作先设置readCount信号量，再判断isWrite信号量; 写操作先
+ *。   为了避免死锁，读操作先设置readCount条件变量，再判断isWrite条件变量; 写操作先
  **/
 
 
+/**
+ *
+ *  写的有问题，回头处理
+ **/
 #import "ZMReadWriteLock.h"
 
 #define ReadLockArraySyncLock @"ReadLockArraySyncLock"

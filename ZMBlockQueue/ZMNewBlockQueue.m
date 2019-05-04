@@ -7,6 +7,17 @@
 //
 
 #import "ZMNewBlockQueue.h"
+#include <semaphore.h>
+
+/**
+ * dispatch_semaphore_t 和 c语言中的信号量机制 sem_t 相似
+ * 提供了在多线程之间互斥访问有限个共享资源的机制
+ *
+ * 在我看来， 它们相当于一个简化版的pthread_cond_t,
+ * (1) dispatch_semaphore_t 和 sem_t 只能够对整数值进行判断，而决定线程是否阻塞和唤醒; pthread_cond_t 能够进行复杂的条件判断(多个条件变量综合)
+ * (2) dispatch_semaphore_t 和 sem_t 自动实现了对于条件变量互斥访问; pthread_cond_t 需要一个pthread_mutex_t配合
+ * (3) dispatch_semaphore_t 和 sem_t 一次只能唤醒一个线程；pthread_cond_t可以唤醒多个线程，但是要再次进行条件判断
+ */
 
 #define DefaultCapacity 16
 
