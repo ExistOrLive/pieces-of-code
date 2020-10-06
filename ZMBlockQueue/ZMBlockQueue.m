@@ -54,7 +54,9 @@
          **/
         pthread_mutex_init(&syncMutex,NULL);
         
-        pthread_cond_init(&putCondition, NULL);        
+        pthread_cond_init(&putCondition, NULL);
+        
+        pthread_cond_init(&takeCondition, NULL); 
     }
     
     return self;
