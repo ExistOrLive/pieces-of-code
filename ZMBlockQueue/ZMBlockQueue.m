@@ -15,7 +15,7 @@
  * 4、 当消费者线程从缓存队列中取出一个元素，需要唤醒等待的生产者线程
  *
  *
- *  pthread_cond_t 是一个条件， pthread_mutex_t 是一个同步锁， 两者可以组成一个条件锁； 条件锁要保证条件变量的互斥访问
+ *  pthread_cond_t 是一个条件锁， pthread_mutex_t 是一个互斥锁， 
  *  pthread_mutex_t 要保证条件变量的修改及访问 和 pthread_cond_wait 在同一个临界区
  **/
 
@@ -30,12 +30,8 @@
     pthread_mutex_t syncMutex;               // 同步锁，用于对数组的互斥访问
     
     pthread_cond_t putCondition;             // 条件锁，在数组容量满时，wait
-    pthread_mutex_t putMutex;                // 保证 put线程对信号量的同步访问
     
-    pthread_cond_t takeCondition;            // 条件锁， 在数组为空时， wait
-    pthread_mutex_t takeMutex;               // 保证 take线程对信号量的同步访问
-    
-    
+    pthread_cond_t takeCondition;            // 条件锁， 在数组为空时， wait    
 }
 
 @property(nonatomic,strong) NSMutableArray * queue;
@@ -58,12 +54,7 @@
          **/
         pthread_mutex_init(&syncMutex,NULL);
         
-        pthread_cond_init(&putCondition, NULL);
-        pthread_mutex_init(&putMutex, NULL);
-        
-        pthread_cond_init(&takeCondition, NULL);
-        pthread_mutex_init(&takeMutex, NULL);
-        
+        pthread_cond_init(&putCondition, NULL);        
     }
     
     return self;
@@ -101,27 +92,23 @@
         return;
     }
     
-    pthread_mutex_lock(&putMutex);
+    pthread_mutex_lock(&syncMutex);
     
-    if(self.size >= self.capacity)
+    if([self.queue count] >= self.capacity)
     {
         NSLog(@"Thread[%@] put wait %@",[NSThread currentThread],value);
-        pthread_cond_wait(&putCondition, &putMutex);
+        pthread_cond_wait(&putCondition, &syncMutex);
     }
     
     NSLog(@"Thread[%@] put start %@",[NSThread currentThread],value);
-    
-    pthread_mutex_lock(&syncMutex);
-    
+        
     [self.queue insertObject:value atIndex:0];
-    
-    pthread_mutex_unlock(&syncMutex);
-    
+        
     NSLog(@"Thread[%@] put end %@",[NSThread currentThread],value);
     
     pthread_cond_signal(&takeCondition);
     
-    pthread_mutex_unlock(&putMutex);
+    pthread_mutex_unlock(&syncMutex);
     
     NSLog(@"Thread[%@] count %ld",[NSThread currentThread],self.size);
 
@@ -133,30 +120,26 @@
 {
     id value = nil;
     
-    pthread_mutex_lock(&takeMutex);
+    pthread_mutex_lock(&syncMutex);
     
-    if(self.size <= 0)
+    if([self.queue count] <= 0)
     {
         NSLog(@"Thread[%@] take wait",[NSThread currentThread]);
-        pthread_cond_wait(&takeCondition, &takeMutex);
+        pthread_cond_wait(&takeCondition, &syncMutex);
     }
   
     NSLog(@"Thread[%@] take start",[NSThread currentThread]);
-    
-    pthread_mutex_lock(&syncMutex);
-    
+        
     value = [self.queue lastObject];
     [self.queue removeLastObject];
-    
-    pthread_mutex_unlock(&syncMutex);
-    
+        
     NSLog(@"Thread[%@] take %@ end",[NSThread currentThread],value);
     
     pthread_cond_signal(&putCondition);
     
     NSLog(@"Thread[%@] count %ld",[NSThread currentThread],self.size);
     
-    pthread_mutex_unlock(&takeMutex);
+    pthread_mutex_unlock(&syncMutex);
     
     return value;
 }
@@ -165,12 +148,8 @@
 - (void) dealloc
 {
     pthread_mutex_destroy(&syncMutex);
-    
     pthread_cond_destroy(&putCondition);
-    pthread_mutex_destroy(&putMutex);
-    
     pthread_cond_destroy(&takeCondition);
-    pthread_mutex_destroy(&takeMutex);
 }
 
 
