@@ -7,7 +7,6 @@
 //
 
 #import "ZMNewBlockQueue.h"
-#include <semaphore.h>
 
 /**
  * dispatch_semaphore_t 和 c语言中的信号量机制 sem_t 相似
@@ -83,21 +82,13 @@
 
 - (void) put:(id) object
 {
-    if(!object)
-    {
+    if(!object){
         return;
     }
     
-    long result = dispatch_semaphore_wait(enoughConditionLock, DISPATCH_TIME_FOREVER);
-    
-    if(!result)
-    {
-        NSLog(@"Thread[%@] put wait %@",[NSThread currentThread],object);
-    }
-    
-    NSLog(@"Thread[%@] put start %@",[NSThread currentThread],object);
-    
-    dispatch_semaphore_wait(syncLock, DISPATCH_TIME_FOREVER);
+    dispatch_semaphore_wait(enoughConditionLock, DISPATCH_TIME_FOREVER);           // 当缓冲区满，等待
+        
+    dispatch_semaphore_wait(syncLock, DISPATCH_TIME_FOREVER);                      // 保证互斥
     
     [_array insertObject:object atIndex:0];
     
@@ -106,22 +97,14 @@
     NSLog(@"Thread[%@] put end %@",[NSThread currentThread],object);
     
     dispatch_semaphore_signal(emptyConditionLock);
-    
-    NSLog(@"put count[%ld]",self.size);
 }
 
 - (id) take
 {
     id object = nil;
     
-    long result = dispatch_semaphore_wait(emptyConditionLock, DISPATCH_TIME_FOREVER);
+    dispatch_semaphore_wait(emptyConditionLock, DISPATCH_TIME_FOREVER);          // 当缓冲区为空，等待
     
-    if(!result)
-    {
-        NSLog(@"Thread[%@] take wait",[NSThread currentThread]);
-    }
-    
-    NSLog(@"Thread[%@] take start",[NSThread currentThread]);
     
     dispatch_semaphore_wait(syncLock, DISPATCH_TIME_FOREVER);
     
@@ -134,8 +117,6 @@
     NSLog(@"Thread[%@] take end %@",[NSThread currentThread],object);
     
     dispatch_semaphore_signal(enoughConditionLock);
-    
-     NSLog(@"take count[%ld]",self.size);
     
     return object;
     

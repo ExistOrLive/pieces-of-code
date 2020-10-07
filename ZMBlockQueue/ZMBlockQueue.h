@@ -9,9 +9,8 @@
 #import <Foundation/Foundation.h>
 
 /**
- *  ZMBlockQueue
- *  利用pthread_mutex_t 实现的简单阻塞队列
- *  使用 生产者线程数量 和 消费者线程数量差异不大的情况，如果两者数量差距较大，就无法保证有效的capacity和线程阻塞
+ *  ZMBlockQueue 阻塞队列 生产者，消费者模型
+ *  基于互斥量 pthread_mutex_t 和条件变量 pthread_cond_t  实现的管程
  **/
 
 @interface ZMBlockQueue : NSObject
