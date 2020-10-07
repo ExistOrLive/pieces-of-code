@@ -11,33 +11,20 @@
  * 读写锁的设计
  * 1、 写操作互斥，因此写操作之间需要一个互斥锁 writeLock
  * 2、 读操作之间不需要互斥， 因此读操作之间不需要互斥锁
- * 3、 读的时候不可以写，写的时候不可以读 ， 需要信号量 readCount（当前读操作的个数） isWrite（当前时候正在写）
- * 4、 实现条件变量通信需要条件锁NSCondition，所有没有读操作都有一个条件锁
- * 5、 修改条件变量是互斥的
+ * 3、 读的时候不可以写，写的时候不可以读 ， 需要记录 读者数量 readCount
  *
- *
- *。   为了避免死锁，读操作先设置readCount条件变量，再判断isWrite条件变量; 写操作先
- **/
+*/
 
 
-/**
- *
- *  写的有问题，回头处理
- **/
 #import "ZMReadWriteLock.h"
 
-#define ReadLockArraySyncLock @"ReadLockArraySyncLock"
-
-@interface ZMReadWriteLock()
-
-@property(nonatomic, strong) NSCondition * writeLock;
-
-@property(nonatomic, strong) NSMutableArray * readLocks;
-
-
-@property(nonatomic,assign) int readCount;
-
-@property(nonatomic,assign) BOOL isWrite;
+@interface ZMReadWriteLock(){
+    dispatch_semaphore_t writeLock;
+    
+    dispatch_semaphore_t synclock;
+    
+    int readCount;
+}
 
 @end
 
@@ -45,92 +32,52 @@
 
 - (instancetype) init
 {
-    if(self = [super init])
-    {
-        _writeLock = [[NSCondition alloc] init];
-        _readLocks = [[NSMutableArray alloc] init];
+    if(self = [super init]){
         
-        _readCount = 0;
-        _isWrite = 0;
+        writeLock = dispatch_semaphore_create(1);
+        
+        synclock = dispatch_semaphore_create(1);
+        
+        readCount = 0;
     }
     
     return self;
 }
 
-- (NSCondition *) lockReadLock
-{
-    NSCondition * readLock = [[NSCondition alloc] init];
+- (void) lockReadLock{
+   
+    dispatch_semaphore_wait(synclock,DISPATCH_TIME_FOREVER);
     
-    [readLock lock];
+    readCount ++;
     
-    /**
-     *  加了读锁后，首先设置信号量 readCount
-     *  信号量的修改需要互斥，通过@synchronied实现
-     *  先设置信号量readCount，再判断信号量isWrite，而写锁先判断信号量readCount 再设置信号量isWrite，可以避免死锁
-     *  且这样读优先级更高
-     **/
-    @synchronized(ReadLockArraySyncLock)
-    {
-        self.readCount ++;
-        [self.readLocks addObject:readLock];
+    if(readCount == 1){                                               // 如果是第一个读者，请求写锁
+        dispatch_semaphore_wait(writeLock, DISPATCH_TIME_FOREVER);
     }
     
-    
-    if(self.isWrite)
-    {
-        [readLock wait];
-    }
-    
-  
-    return readLock;
+    dispatch_semaphore_signal(synclock);
 }
 
-- (void) unLockReadLock:(NSCondition *) readLock
-{
-    @synchronized(ReadLockArraySyncLock)
-    {
-         self.readCount --;
-        [self.readLocks removeObject:readLock];
+- (void) unLockReadLock{
+    
+    dispatch_semaphore_wait(synclock,DISPATCH_TIME_FOREVER);
+    
+    readCount --;
+    
+    if(readCount == 0){
+        dispatch_semaphore_signal(writeLock);                         // 如果是最后一个读者，释放写锁
     }
     
-    if(self.readCount == 0)
-    {
-        [self.writeLock broadcast];
-    }
-    
-    [readLock unlock];
+    dispatch_semaphore_signal(synclock);
 }
 
 
-- (void) lockWriteLock
-{
-    [self.writeLock lock];
-    
-    if(self.readCount > 0)
-    {
-        [self.writeLock wait];
-    }
-    
-    @synchronized(ReadLockArraySyncLock)
-    {
-        self.isWrite = YES;
-    }
+- (void) lockWriteLock{
+    dispatch_semaphore_wait(writeLock, DISPATCH_TIME_FOREVER);
 }
 
 
-- (void) unLockWriteLock
-{
-    @synchronized(ReadLockArraySyncLock)
-    {
-        self.isWrite = NO;
-    }
-    
-    for(NSCondition * condition in self.readLocks)
-    {
-        [condition signal];
-    }
-
-    [self.writeLock unlock];
+- (void) unLockWriteLock{
+    dispatch_semaphore_signal(writeLock);
 }
 
 
@@ -138,3 +85,119 @@
 
 
 @end
+
+
+
+@interface ZMReadWriteLock2(){
+    
+    dispatch_semaphore_t mutexReadCount;            // 保证reacCount的互斥访问
+    
+    dispatch_semaphore_t mutexWriteCount;           // 保证writeCount的互斥访问     每个共享变量由不同的互斥锁保证互斥，避免占有并等待，循环等待导致死锁的问题
+    
+    dispatch_semaphore_t r;
+    
+    dispatch_semaphore_t w;                         // r，w 用于 读写之间的同步
+    
+    dispatch_semaphore_t mutextPriority;            // 在优先锁释放前，若来了读者，写者会P(r) 而 读者因为优先锁没有释放，无法P(r)
+    
+    
+    int readCount;
+    int writeCount;
+    
+}
+
+@end
+
+@implementation ZMReadWriteLock2
+
+- (instancetype) init
+{
+    if(self = [super init]){
+        
+        mutexReadCount = dispatch_semaphore_create(1);
+        mutexWriteCount = dispatch_semaphore_create(1);
+        r = dispatch_semaphore_create(1);
+        w = dispatch_semaphore_create(1);
+        mutextPriority = dispatch_semaphore_create(1);
+        
+        readCount = 0;
+        writeCount = 0;
+    }
+    
+    return self;
+}
+
+- (void) lockReadLock{
+   
+    dispatch_semaphore_wait(mutextPriority,DISPATCH_TIME_FOREVER);
+    
+    dispatch_semaphore_wait(r,DISPATCH_TIME_FOREVER);
+    
+    dispatch_semaphore_wait(mutexReadCount,DISPATCH_TIME_FOREVER);
+    
+    readCount ++;
+    
+    if(readCount == 1){
+        dispatch_semaphore_wait(w, DISPATCH_TIME_FOREVER);                // 与写操作互斥
+    }
+    
+    dispatch_semaphore_signal(mutexReadCount);
+    
+    dispatch_semaphore_signal(r);
+    
+    dispatch_semaphore_signal(mutextPriority);
+}
+
+- (void) unLockReadLock{
+    
+    dispatch_semaphore_wait(mutexReadCount,DISPATCH_TIME_FOREVER);
+    
+    readCount --;
+    
+    if(readCount == 0){
+        dispatch_semaphore_signal(w);                         // 如果是最后一个读者，释放写锁
+    }
+    
+    dispatch_semaphore_signal(mutexReadCount);
+}
+
+
+- (void) lockWriteLock{
+    
+    dispatch_semaphore_wait(mutexWriteCount, DISPATCH_TIME_FOREVER);
+    
+    writeCount++;
+    
+    if(writeCount == 1){
+        dispatch_semaphore_wait(r, DISPATCH_TIME_FOREVER);                  // 开始写，阻止后续的读操作
+    }
+    
+    dispatch_semaphore_signal(mutexWriteCount);
+    
+    
+    dispatch_semaphore_wait(w, DISPATCH_TIME_FOREVER);                      // 保证读的互斥
+
+}
+
+
+- (void) unLockWriteLock{
+    
+    dispatch_semaphore_signal(w);
+
+    dispatch_semaphore_wait(mutexWriteCount, DISPATCH_TIME_FOREVER);
+    
+    writeCount--;
+    
+    if(writeCount == 0){
+        dispatch_semaphore_signal(r);               // 放行后续的读操作
+    }
+    
+    dispatch_semaphore_signal(mutexWriteCount);
+}
+
+
+
+
+
+@end
+

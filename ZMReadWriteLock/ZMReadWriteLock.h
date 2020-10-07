@@ -8,11 +8,24 @@
 
 #import <Foundation/Foundation.h>
 
+//  基于信号量实现的读者写者模型 读写锁   读者优先
+
 @interface ZMReadWriteLock : NSObject
 
-- (NSCondition *) lockReadLock;
-- (void) unLockReadLock:(NSCondition *) readLock;
+- (void) lockReadLock;
+- (void) unLockReadLock;
 
+- (void) lockWriteLock;
+- (void) unLockWriteLock;
+
+
+@end
+
+
+@interface ZMReadWriteLock2 : NSObject
+
+- (void) lockReadLock;
+- (void) unLockReadLock;
 
 - (void) lockWriteLock;
 - (void) unLockWriteLock;

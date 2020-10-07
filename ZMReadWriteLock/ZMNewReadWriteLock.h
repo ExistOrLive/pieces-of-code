@@ -8,7 +8,24 @@
 
 #import <Foundation/Foundation.h>
 
-@interface ZMNewReadWriteLock : NSObject
+//  基于互斥量和条件变量实现的读者写者模型 读写锁   读者优先
+
+@interface ZMNewReadWriteLock1 : NSObject
+
+- (void) lockReadLock;
+- (void) unLockReadLock;
+
+
+- (void) lockWriteLock;
+- (void) unLockWriteLock;
+
+
+@end
+
+
+//  基于互斥量和条件变量实现的读者写者模型 读写锁   写者优先
+
+@interface ZMNewReadWriteLock2 : NSObject
 
 - (void) lockReadLock;
 - (void) unLockReadLock;

@@ -30,10 +30,12 @@
 
 
 
-@interface ZMNewReadWriteLock()
+@interface ZMNewReadWriteLock1()
 {
     pthread_mutex_t mutex;
-    pthread_cond_t  condition;
+    
+    pthread_cond_t  readCondition;
+    pthread_cond_t  writeCondition;
 
     int readCount;
     BOOL isWrite;
@@ -43,7 +45,7 @@
 @end
 
 
-@implementation ZMNewReadWriteLock
+@implementation ZMNewReadWriteLock1
 
 - (instancetype) init
 {
@@ -51,7 +53,9 @@
     {
         pthread_mutex_init(&mutex,NULL);
         
-        pthread_cond_init(&condition, NULL);
+        pthread_cond_init(&readCondition, NULL);
+        
+        pthread_cond_init(&writeCondition, NULL);
     }
     
     return self;
@@ -61,9 +65,8 @@
 {
     pthread_mutex_lock(&mutex);
     
-    while(isWrite)
-    {
-        pthread_cond_wait(&condition, &mutex);
+    while(isWrite){
+        pthread_cond_wait(&readCondition, &mutex);
     }
 
     readCount ++;
@@ -81,7 +84,7 @@
     
     if(readCount == 0)
     {
-        pthread_cond_broadcast(&condition);         // 唤醒所有在
+        pthread_cond_signal(&writeCondition);         // 唤醒所有在
     }
     
     pthread_mutex_unlock(&mutex);
@@ -92,9 +95,9 @@
 {
     pthread_mutex_lock(&mutex);
     
-    while(readCount > 0 || isWrite)                                         // 使用while，令写线程在阻塞唤醒后，重新判断条件变量
-    {
-        pthread_cond_wait(&condition, &mutex);
+    while(readCount > 0 || isWrite){                                         // 使用while，令写线程在阻塞唤醒后，重新判断条件变量
+    
+        pthread_cond_wait(&writeCondition, &mutex);
     }
     
     isWrite = YES;
@@ -109,7 +112,107 @@
 
     isWrite = NO;
     
-    pthread_cond_broadcast(&condition);
+    pthread_cond_signal(&writeCondition);
+    
+    pthread_cond_broadcast(&readCondition);
+    
+    pthread_mutex_unlock(&mutex);
+
+}
+
+
+
+@end
+
+
+
+@interface ZMNewReadWriteLock2()
+{
+    pthread_mutex_t mutex;
+    
+    pthread_cond_t  readCondition;
+    pthread_cond_t  writeCondition;
+
+    int readCount;
+    BOOL isWrite;
+    int waitWrite;                    // 计算等待写的线程数
+}
+
+@end
+
+
+@implementation ZMNewReadWriteLock2
+
+- (instancetype) init
+{
+    if(self = [super init])
+    {
+        pthread_mutex_init(&mutex,NULL);
+        
+        pthread_cond_init(&readCondition, NULL);
+        
+        pthread_cond_init(&writeCondition, NULL);
+    }
+    
+    return self;
+}
+
+- (void) lockReadLock
+{
+    pthread_mutex_lock(&mutex);
+    
+    while(isWrite || waitWrite > 0){
+        pthread_cond_wait(&readCondition, &mutex);
+    }
+
+    readCount ++;
+    
+    pthread_mutex_unlock(&mutex);
+}
+
+
+
+- (void) unLockReadLock
+{
+    pthread_mutex_lock(&mutex);
+    
+    readCount --;
+    
+    if(readCount == 0){
+        pthread_cond_signal(&writeCondition);         // 唤醒写线程
+    }
+    
+    pthread_mutex_unlock(&mutex);
+}
+
+
+- (void) lockWriteLock
+{
+    pthread_mutex_lock(&mutex);
+    
+    while(readCount > 0 || isWrite){                                         // 使用while，令写线程在阻塞唤醒后，重新判断条件变量
+        waitWrite++;
+        pthread_cond_wait(&writeCondition, &mutex);
+        waitWrite--;
+    }
+    
+    isWrite = YES;
+    
+    pthread_mutex_unlock(&mutex);
+}
+
+
+- (void) unLockWriteLock
+{
+    pthread_mutex_lock(&mutex);
+
+    isWrite = NO;
+    
+    pthread_cond_signal(&writeCondition);
+    
+    if(waitWrite <= 0) {
+        pthread_cond_broadcast(&readCondition);
+    }
     
     pthread_mutex_unlock(&mutex);
 
